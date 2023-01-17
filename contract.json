@@ -1,0 +1,22 @@
+{
+    "WNativeRelayer": "0x7c48e7bf6f03abf60dc4bd6a1868f54ec8b3fef8",
+    "AFIR": "0x72F2F63D14aaF51bb0E05D655cD40Fe01DA1CAE3",
+    "FairLaunch": "0xa9B7046654BF0E5e2d827e45fD86F0A37aE0210A",
+    "AFIFairLaunch": "0x36B5d43B515f47448bE7eFb65aA491d9FdD76D47",
+    "SimpleVaultConfig": "0xd62cc2AAf458dD06cEe9Ab493bab20593367D1A5",
+    "SimpleVaultConfig Implementation": "0x69f654A50f4DC5db497ebF4E8800A494c51E7D80",
+    "ProxyAdmin SimpleVaultConfig": "0x18532498fa6eb9dEA1D1239007130AE41A42CA3a",
+    "DebtToken": "0xDee9E378e483AB862D93364069aE381377bb2899",
+    "DebtToken Implementation": "0x839B4b444Defce70D35Cc713510E78D275F2A215",
+    "ibBUSDVault": "0xfC48d0dF8c4adeE0893524F2dBeBdBadf202b3C2",
+    "ibBUSDVault Implementation": "0xd20942286A5e22f30D90776A626a47e170F4E658",
+    "AFIFarmB": "0x2d70E0C0afA7f6E2d3B2b0b71d9B8fa4de781601",
+    "PancakeswapV2StrategyLiquidate": "0xf86bf0438F506B361bf0A9594D0e2aEA5a8ae443",
+    "PancakeswapV2StrategyAddBaseTokenOnly": "0x9a961d9A6944DC69C3bA4D59DEbC5935f202f6eC",
+    "PancakeswapV2Worker": "0xfA9b4357dDB4a2e95567F2b56a81118F7a58B43D",
+    "PancakeswapV2RestrictedStrategyAddTwoSidesOptimal": "0x4d274Ef11f2B849b5634995DE17F9910a4e2a100",
+    
+    "Alpaca Token": "0x16e1742abf74ebf100527cfa211342cbf7d8750e",
+    "InterestModel": "0xD718813b83c546cB670F6a655B448DaFd0ca844F"
+    
+}

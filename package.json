@@ -1,0 +1,34 @@
+{
+  "name": "hardhat-project",
+  "dependencies": {
+    "@nomiclabs/hardhat-ethers": "*",
+    "@nomiclabs/hardhat-etherscan": "*",
+    "@nomiclabs/hardhat-waffle": "*",
+    "@openzeppelin/contracts": "^4.4.2",
+    "@openzeppelin/contracts-upgradeable": "^4.5.0",
+    "@openzeppelin/hardhat-upgrades": "^1.21.0",
+    "@pancakeswap/pancake-swap-lib": "^0.0.4",
+    "@sphynxswap/sphynx-swap-lib": "0.0.3",
+    "@sphynxswap/swap-core": "^0.1.0",
+    "@sphynxswap/swap-periphery": "^0.1.0",
+    "chai": "^4.3.4",
+    "delay": "^5.0.0",
+    "dotenv": "^10.0.0",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.5.1",
+    "hardhat-deploy": "*",
+    "hardhat-deploy-ethers": "*",
+    "openzeppelin-solidity": "^2.2.0"
+  },
+  "devDependencies": {
+    "hardhat": "*"
+  },
+  "scripts": {
+    "node": "npx hardhat node",
+    "compile": "npx hardhat compile",
+    "deploy:localhost": "npx hardhat run --network localhost scripts/deploy.js",
+    "deploy:bsctest": "npx hardhat run --network bsctest scripts/deploy.js",
+    "deploy:bsc": "npx hardhat run --network bsc scripts/deploy.js",
+    "test": "npx hardhat test "
+  }
+}
