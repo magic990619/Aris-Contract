@@ -37,6 +37,7 @@ contract PancakeswapV2Worker is OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, 
   address public wNative;
   address public override baseToken;
   address public override farmingToken;
+  address public aries;
   address public cake;
   address public operator;
   uint256 public pid;
@@ -51,6 +52,25 @@ contract PancakeswapV2Worker is OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, 
   uint256 public maxReinvestBountyBps;
   mapping(address => bool) public okReinvestors;
 
+  uint256 public controllerFee;
+  uint256 public controllerFeeMax;
+  uint256 public controllerFeeUL;
+
+  uint256 public buyBackRate;
+  uint256 public buyBackRateMax;
+  uint256 public buyBackRateUL;
+  address public buyBackAddress;
+
+  address public fundManager;
+  address public fundManager2; 
+  address public fundManager3;
+  address public receiveFee;
+
+  uint256 public slippageFactor;
+  uint256 public slippageFactorUL;
+
+  bool public enableAddLiquidity;
+
   /// @notice Configuration varaibles for V2
   uint256 public fee;
   uint256 public feeDenom;
@@ -63,13 +83,15 @@ contract PancakeswapV2Worker is OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, 
     uint256 _pid,
     IStrategy _addStrat,
     IStrategy _liqStrat,
-    uint256 _reinvestBountyBps
+    uint256 _reinvestBountyBps,
+    address _aries
   ) external initializer {
     OwnableUpgradeSafe.__Ownable_init();
     ReentrancyGuardUpgradeSafe.__ReentrancyGuard_init();
 
     operator = _operator;
     baseToken = _baseToken;
+    aries = _aries;
     wNative = _router.WETH();
     masterChef = _masterChef;
     router = _router;
@@ -90,6 +112,23 @@ contract PancakeswapV2Worker is OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, 
     maxReinvestBountyBps = 500;
     fee = 9975;
     feeDenom = 10000;
+    controllerFee = 2800;
+    controllerFeeMax = 10000; // 100 = 1%
+    controllerFeeUL = 6000;
+    buyBackRate = 4200;
+    buyBackRateMax = 10000; // 100 = 1%
+    buyBackRateUL = 6000;
+    buyBackAddress = 0x000000000000000000000000000000000000dEaD;
+
+    fundManager = address(0xc8c3ac919f43b8aa875DA490610fc4AD7F74d396);
+    fundManager2 = address(0xc8c3ac919f43b8aa875DA490610fc4AD7F74d396); 
+    fundManager3 = address(0xc8c3ac919f43b8aa875DA490610fc4AD7F74d396);
+    receiveFee = address(0xc8c3ac919f43b8aa875DA490610fc4AD7F74d396);
+
+    slippageFactor = 950; // 5% default slippage tolerance
+    slippageFactorUL = 995;
+    
+    enableAddLiquidity = true;
 
     require(
       reinvestBountyBps <= maxReinvestBountyBps,
@@ -148,25 +187,67 @@ contract PancakeswapV2Worker is OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, 
     // 3. Send the reward bounty to the caller.
     uint256 bounty = reward.mul(reinvestBountyBps) / 10000;
     if (bounty > 0) cake.safeTransfer(msg.sender, bounty);
-    // 4. Convert all the remaining rewards to BaseToken via Native for liquidity.
-    address[] memory path;
-    if (baseToken == wNative) {
-      path = new address[](2);
-      path[0] = address(cake);
-      path[1] = address(wNative);
-    } else {
-      path = new address[](3);
-      path[0] = address(cake);
-      path[1] = address(wNative);
-      path[2] = address(baseToken);
+    reward = reward.sub(bounty);
+    // 4. Convert earn tokens into wbnb tokens
+    address[] memory earnedToWbnbPath;
+    earnedToWbnbPath = new address[](2);
+    earnedToWbnbPath[0] = address(cake);
+    earnedToWbnbPath[1] = address(wNative);
+    router.swapExactTokensForTokensSupportingFeeOnTransferTokens(reward, 0, earnedToWbnbPath, address(this), block.timestamp.add(600));
+    // 5. Distribute fees.
+    uint256 wbnbBal = wNative.balanceOf(address(this));
+    wbnbBal = distributeFees(wbnbBal);
+    // 6. Convert buyback wbnb into ARIES token and send to buyBackAddress.
+    uint256 buyBackAmt = wbnbBal.mul(buyBackRate).div(buyBackRateMax);
+    address[] memory wbnbToARIESPath;
+    wbnbToARIESPath = new address[](2);
+    wbnbToARIESPath[0] = address(wNative);
+    wbnbToARIESPath[1] = aries;
+    uint256[] memory amounts = router.getAmountsOut(buyBackAmt, wbnbToARIESPath);
+    uint256 amountOut = amounts[amounts.length.sub(1)];
+    router
+      .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        buyBackAmt,
+        amountOut.mul(slippageFactor).div(100),
+        wbnbToARIESPath,
+        buyBackAddress,
+        block.timestamp.add(600)
+      );
+
+    // 7. Add Liquidity
+    if (enableAddLiquidity) {
+      uint256 earnedAddressHalf = wNative.balanceOf(address(this)).div(2);
+      if (baseToken != wNative) {
+        address[] memory wbnbToBasePath;
+        wbnbToBasePath = new address[](2);
+        wbnbToBasePath[0] = address(wNative);
+        wbnbToBasePath[1] = address(baseToken);
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(earnedAddressHalf, 0, wbnbToBasePath, address(this), now.add(600));
+      }
+      if (farmingToken != wNative) {
+        address[] memory wbnbToFarmingPath;
+        wbnbToFarmingPath = new address[](2);
+        wbnbToFarmingPath[0] = address(wNative);
+        wbnbToFarmingPath[1] = address(farmingToken);
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(earnedAddressHalf, 0, wbnbToFarmingPath, address(this), now.add(600));
+      }
+      uint256 baseBal = baseToken.balanceOf(address(this));
+      uint256 farmingBal = farmingToken.balanceOf(address(this));
+      router.addLiquidity(
+        address(baseToken),
+        address(farmingToken),
+        baseBal,
+        farmingBal,
+        0,
+        0,
+        address(this),
+        now
+      );
     }
-    router.swapExactTokensForTokens(reward.sub(bounty), 0, path, address(this), now);
-    // 5. Use add Token strategy to convert all BaseToken to LP tokens.
-    baseToken.safeTransfer(address(addStrat), baseToken.myBalance());
-    addStrat.execute(address(0), 0, abi.encode(0));
-    // 6. Mint more LP tokens and stake them for more rewards.
+
+    // 8. Farming
     masterChef.deposit(pid, lpToken.balanceOf(address(this)));
-    // 7. Reset approve
+    // 9. Reset approve
     cake.safeApprove(address(router), 0);
     address(lpToken).safeApprove(address(masterChef), 0);
     emit Reinvest(msg.sender, reward, bounty);
@@ -279,6 +360,25 @@ contract PancakeswapV2Worker is OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, 
     }
   }
 
+  /// @dev Distribute fees to several wallets
+  function distributeFees(uint256 _earnedAmt) internal returns (uint256) {
+    if (_earnedAmt > 0) {
+      // Performance fee
+      if (controllerFee > 0) {
+        uint256 calcFee = _earnedAmt.mul(controllerFee).div(
+          controllerFeeMax
+        );
+        wNative.safeTransfer(fundManager, calcFee.mul(36).div(100));
+        wNative.safeTransfer(fundManager2, calcFee.mul(7).div(100));
+        wNative.safeTransfer(fundManager3, calcFee.mul(3).div(100));
+        wNative.safeTransfer(receiveFee, calcFee.mul(54).div(100));
+        _earnedAmt = _earnedAmt.sub(calcFee);
+      }
+    }
+
+    return _earnedAmt;
+  }
+
   /// @dev Set the reward bounty for calling reinvest operations.
   /// @param _reinvestBountyBps The bounty value to update.
   function setReinvestBountyBps(uint256 _reinvestBountyBps) external onlyOwner {
@@ -326,4 +426,49 @@ contract PancakeswapV2Worker is OwnableUpgradeSafe, ReentrancyGuardUpgradeSafe, 
     addStrat = _addStrat;
     liqStrat = _liqStrat;
   }
+
+  /// @dev Set the perfomance fee
+  /// @param _controllerFee The new perfomance fee
+  function setControllerFee(uint256 _controllerFee) external onlyOwner {
+    require(_controllerFee <= controllerFeeUL, "too high");
+    controllerFee = _controllerFee;
+  }
+
+  /// @dev Set the buyBack Rate
+  /// @param _buyBackRate The new buyback rate
+  function setbuyBackRate(uint256 _buyBackRate) external onlyOwner {
+    require(buyBackRate <= buyBackRateUL, "too high");
+    buyBackRate = _buyBackRate;
+  }
+
+  /// @dev Set addLiquidity status
+  /// @param _status The new status
+  function setEnableAddLiquidity(bool _status) external onlyOwner {
+    enableAddLiquidity = _status;
+  }
+
+  /// @dev Set FundManager address
+  /// @param _fundManager The new fundManager address
+  function setfundManager(address _fundManager) external onlyOwner {
+    fundManager = _fundManager;
+  }
+
+  /// @dev Set FundManager2 address
+  /// @param _fundManager2 The new fundManager address
+  function setfundManager2(address _fundManager2) external onlyOwner {
+    fundManager2 = _fundManager2;
+  }
+
+  /// @dev Set FundManager address
+  /// @param _fundManager3 The new fundManager address
+  function setfundManager3(address _fundManager3) external onlyOwner {
+    fundManager3 = _fundManager3;
+  }
+
+  /// @dev Update ARIES Address
+  /// @param _aries The new fundManager address
+  function setAries(address _aries) external onlyOwner {
+    aries = _aries;
+  }
+
 }

@@ -69,6 +69,11 @@
       "address": "0x2b8B996E7896FbbE425F5C4C4a652e80de9e97FB",
       "txHash": "0x6c93e99d74d250777bdec390bea84f3088e338a955733029ffa5d9bbad889530",
       "kind": "transparent"
+    },
+    {
+      "address": "0xEc756F91DF53E4DfE0fF7738bF7C030DDf3636fA",
+      "txHash": "0xa2c541a65c7447b4197711a3b6f9a98f995706247344be1941c2ee1696a863c0",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -1386,6 +1391,409 @@
           },
           "t_mapping(t_address,t_bool)": {
             "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    },
+    "7cb385e29048c608c6fbf2176960514ac45e1a031f8da5375676c5a6b8796632": {
+      "address": "0xDeb5A0159Be6A8D969c59E094B7de734E954D9ec",
+      "txHash": "0x59d84722c8b33df266c58e6f7527dd050c57b6c41d040a71b8f7e2233989ad8a",
+      "layout": {
+        "solcVersion": "0.6.6",
+        "storage": [
+          {
+            "label": "initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "contracts\\interface\\Initializable.sol:21"
+          },
+          {
+            "label": "initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "contracts\\interface\\Initializable.sol:26"
+          },
+          {
+            "label": "______gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "Initializable",
+            "src": "contracts\\interface\\Initializable.sol:66"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeSafe",
+            "src": "contracts\\interface\\Context.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "OwnableUpgradeSafe",
+            "src": "contracts\\interface\\Ownable.sol:21"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeSafe",
+            "src": "contracts\\interface\\Ownable.sol:80"
+          },
+          {
+            "label": "_notEntered",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_bool",
+            "contract": "ReentrancyGuardUpgradeSafe",
+            "src": "contracts\\interface\\ReentrancyGuard.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeSafe",
+            "src": "contracts\\interface\\ReentrancyGuard.sol:61"
+          },
+          {
+            "label": "masterChef",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IPancakeMasterChef)6358",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:33"
+          },
+          {
+            "label": "factory",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_contract(IPancakeFactory)6294",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:34"
+          },
+          {
+            "label": "router",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_contract(IPancakeRouter02)7058",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:35"
+          },
+          {
+            "label": "lpToken",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_contract(IPancakePair)6668",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:36"
+          },
+          {
+            "label": "wNative",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:37"
+          },
+          {
+            "label": "baseToken",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:38"
+          },
+          {
+            "label": "farmingToken",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:39"
+          },
+          {
+            "label": "aries",
+            "offset": 0,
+            "slot": "208",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:40"
+          },
+          {
+            "label": "cake",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:41"
+          },
+          {
+            "label": "operator",
+            "offset": 0,
+            "slot": "210",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:42"
+          },
+          {
+            "label": "pid",
+            "offset": 0,
+            "slot": "211",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:43"
+          },
+          {
+            "label": "shares",
+            "offset": 0,
+            "slot": "212",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:46"
+          },
+          {
+            "label": "okStrats",
+            "offset": 0,
+            "slot": "213",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:47"
+          },
+          {
+            "label": "totalShare",
+            "offset": 0,
+            "slot": "214",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:48"
+          },
+          {
+            "label": "addStrat",
+            "offset": 0,
+            "slot": "215",
+            "type": "t_contract(IStrategy)7071",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:49"
+          },
+          {
+            "label": "liqStrat",
+            "offset": 0,
+            "slot": "216",
+            "type": "t_contract(IStrategy)7071",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:50"
+          },
+          {
+            "label": "reinvestBountyBps",
+            "offset": 0,
+            "slot": "217",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:51"
+          },
+          {
+            "label": "maxReinvestBountyBps",
+            "offset": 0,
+            "slot": "218",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:52"
+          },
+          {
+            "label": "okReinvestors",
+            "offset": 0,
+            "slot": "219",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:53"
+          },
+          {
+            "label": "controllerFee",
+            "offset": 0,
+            "slot": "220",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:55"
+          },
+          {
+            "label": "controllerFeeMax",
+            "offset": 0,
+            "slot": "221",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:56"
+          },
+          {
+            "label": "controllerFeeUL",
+            "offset": 0,
+            "slot": "222",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:57"
+          },
+          {
+            "label": "buyBackRate",
+            "offset": 0,
+            "slot": "223",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:59"
+          },
+          {
+            "label": "buyBackRateMax",
+            "offset": 0,
+            "slot": "224",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:60"
+          },
+          {
+            "label": "buyBackRateUL",
+            "offset": 0,
+            "slot": "225",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:61"
+          },
+          {
+            "label": "buyBackAddress",
+            "offset": 0,
+            "slot": "226",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:62"
+          },
+          {
+            "label": "fundManager",
+            "offset": 0,
+            "slot": "227",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:64"
+          },
+          {
+            "label": "fundManager2",
+            "offset": 0,
+            "slot": "228",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:65"
+          },
+          {
+            "label": "fundManager3",
+            "offset": 0,
+            "slot": "229",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:66"
+          },
+          {
+            "label": "receiveFee",
+            "offset": 0,
+            "slot": "230",
+            "type": "t_address",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:67"
+          },
+          {
+            "label": "slippageFactor",
+            "offset": 0,
+            "slot": "231",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:69"
+          },
+          {
+            "label": "slippageFactorUL",
+            "offset": 0,
+            "slot": "232",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:70"
+          },
+          {
+            "label": "enableAddLiquidity",
+            "offset": 0,
+            "slot": "233",
+            "type": "t_bool",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:72"
+          },
+          {
+            "label": "fee",
+            "offset": 0,
+            "slot": "234",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:75"
+          },
+          {
+            "label": "feeDenom",
+            "offset": 0,
+            "slot": "235",
+            "type": "t_uint256",
+            "contract": "PancakeswapV2Worker",
+            "src": "contracts\\PancakeswapV2Worker.sol:76"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IPancakeFactory)6294": {
+            "label": "contract IPancakeFactory",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPancakeMasterChef)6358": {
+            "label": "contract IPancakeMasterChef",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPancakePair)6668": {
+            "label": "contract IPancakePair",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPancakeRouter02)7058": {
+            "label": "contract IPancakeRouter02",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStrategy)7071": {
+            "label": "contract IStrategy",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)",
             "numberOfBytes": "32"
           },
           "t_uint256": {

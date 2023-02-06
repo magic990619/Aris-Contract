@@ -300,8 +300,8 @@ async function main() {
   // Deployed Address: 0xfA9b4357dDB4a2e95567F2b56a81118F7a58B43D - BSC Testnet
   // Deployed Address: 0xE1e38F2DAd885a47B737b9e04dCBd73A576c0ae7 - BSC Testnet
   // Deployed Address: 0x267c6FC94600837660F51379Ca5cb665002872FA - BSC Testnet
+  // Deployed Address: 0xEc756F91DF53E4DfE0fF7738bF7C030DDf3636fA - BSC Testnet
     
-  /*
   const PancakeswapV2Worker = await hre.ethers.getContractFactory("PancakeswapV2Worker");
   const pancakeswapV2Worker = await hre.upgrades.deployProxy(PancakeswapV2Worker, [
     "0x7A853BD49EF7bc709e312497EA513B2eB48a07F5", // vault
@@ -311,7 +311,8 @@ async function main() {
     "3",                      // pid BUSD-CAKE
     "0x9a961d9A6944DC69C3bA4D59DEbC5935f202f6eC", // addStrat
     "0xf86bf0438F506B361bf0A9594D0e2aEA5a8ae443", // liqStrat
-    "100"                     // reinvestBountyBps
+    "100",                     // reinvestBountyBps,
+    "0x72F2F63D14aaF51bb0E05D655cD40Fe01DA1CAE3"
   ]);
   await pancakeswapV2Worker.deployed();
   console.log("PancakeswapV2Worker Contract deployed to:", pancakeswapV2Worker.address);
@@ -320,7 +321,7 @@ async function main() {
   await hre.run("verify:verify", {
     address: pancakeswapV2Worker.address
   });
-  */
+  
 
   /*------------------------------------------------------------------------------*/
   /*--------------PancakeswapV2RestrictedStrategyAddTwoSidesOptimal---------------*/
@@ -331,7 +332,7 @@ async function main() {
   // Deployed Address: 0xC37f4447f88AF96367fE3555E9597EF14864C123 - BSC Testnet
   // Deployed Address: 0xCC546b2971f86Cbae9df09897dEb3af9dCEC03B7 - BSC Testnet
     
-  
+  /*
   const PancakeswapV2RestrictedStrategyAddTwoSidesOptimal = await hre.ethers.getContractFactory("PancakeswapV2RestrictedStrategyAddTwoSidesOptimal");
   const pancakeswapV2RestrictedStrategyAddTwoSidesOptimal = await hre.upgrades.deployProxy(PancakeswapV2RestrictedStrategyAddTwoSidesOptimal, [
     "0xD99D1c33F9fC3444f8101754aBC46c52416550D1", // RouterV2
@@ -343,7 +344,7 @@ async function main() {
   await hre.run("verify:verify", {
     address: pancakeswapV2RestrictedStrategyAddTwoSidesOptimal.address
   });
-
+*/
   
 }
 
