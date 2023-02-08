@@ -1747,6 +1747,16 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
     address[] public token0ToEarnedPath;
     address[] public token1ToEarnedPath;
 
+    mapping(address => uint256) public shares;  // Info of each user deposited LP tokens
+    mapping(address => uint256) public rewards;  // Info of each user's USDT rewards
+    address[] public stakers;
+    address public constant usdtAddress =
+        0x55d398326f99059fF775485246999027B3197955; // 0x55d398326f99059fF775485246999027B3197955: mainnet        
+    address[] public earnedToUsdtPath;
+    address[] public usdtToAUTOPath;
+    address[] public usdtToToken0Path;
+    address[] public usdtToToken1Path;
+
     constructor(
         address _autoFarmAddress,
         // address _AUTOAddress,
@@ -1795,6 +1805,37 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
         transferOwnership(autoFarmAddress);
     }
 
+
+    // add staker to holders lists
+    function _addStaker(address _userAddress) internal {
+        uint i;
+        for (i = 0; i < stakers.length; i ++) {
+            if (stakers[i] == _userAddress) {
+                break;
+            }
+        }
+        if (i == stakers.length) {
+            stakers.push(_userAddress);
+        }
+    }
+
+    // remove staker from holders lists
+    function _removeStaker(address _userAddress) internal {
+        uint i;
+        for (i = 0; i < stakers.length; i ++) {
+            if (stakers[i] == _userAddress) {
+                break;
+            }
+        }
+        if (i < stakers.length) {
+            uint256 j;
+            for (j = i; j < stakers.length; j ++) {
+                stakers[j] = stakers[j + 1];
+            }
+        }
+        stakers.pop();
+    }
+
     // Receives new deposits from user
     function deposit(address _userAddress, uint256 _wantAmt)
         public
@@ -1823,6 +1864,10 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
         } else {
             wantLockedTotal = wantLockedTotal.add(_wantAmt);
         }
+        if (sharesAdded > 0 && shares[_userAddress] == 0) {
+            _addStaker(_userAddress);
+        }
+        shares[_userAddress] = shares[_userAddress].add(sharesAdded);
 
         return sharesAdded;
     }
@@ -1874,6 +1919,10 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
         }
         sharesTotal = sharesTotal.sub(sharesRemoved);
         wantLockedTotal = wantLockedTotal.sub(_wantAmt);
+        shares[_userAddress] = shares[_userAddress].sub(sharesRemoved);
+        if (shares[_userAddress] <= 0) {
+            _removeStaker(_userAddress);
+        }
 
         IERC20(wantAddress).safeTransfer(autoFarmAddress, _wantAmt);
 
@@ -1897,11 +1946,25 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
             IPancakeswapFarm(farmContractAddress).withdraw(pid, 0);
         }
 
-        // Converts farm tokens into want tokens
+        // Converts farm tokens into usdt tokens
         uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
 
-        earnedAmt = distributeFees(earnedAmt);
-        earnedAmt = buyBack(earnedAmt);
+        if (earnedAddress != usdtAddress) {
+            // Swap earned token to usdt
+            IPancakeRouter02(uniRouterAddress)
+                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                    earnedAmt,
+                    0,
+                    earnedToUsdtPath,
+                    address(this),
+                    now + 60
+                );
+        }
+
+        uint256 usdtAmt = IERC20(usdtAddress).balanceOf(address(this));
+
+        usdtAmt = buyBack(usdtAmt);
+        usdtAmt = distributeFees(usdtAmt);
 
         if (isCAKEStaking) {
             lastEarnBlock = block.number;
@@ -1909,57 +1972,13 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
             return;
         }
 
-        IERC20(earnedAddress).safeIncreaseAllowance(
-            uniRouterAddress,
-            earnedAmt
-        );
-
-        if (earnedAddress != token0Address) {
-            // Swap half earned to token0
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                earnedAmt.div(2),
-                0,
-                earnedToToken0Path,
-                address(this),
-                now + 60
-            );
-        }
-
-        if (earnedAddress != token1Address) {
-            // Swap half earned to token1
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                earnedAmt.div(2),
-                0,
-                earnedToToken1Path,
-                address(this),
-                now + 60
-            );
-        }
-
-        // Get want tokens, ie. add liquidity
-        uint256 token0Amt = IERC20(token0Address).balanceOf(address(this));
-        uint256 token1Amt = IERC20(token1Address).balanceOf(address(this));
-        if (token0Amt > 0 && token1Amt > 0) {
-            IERC20(token0Address).safeIncreaseAllowance(
-                uniRouterAddress,
-                token0Amt
-            );
-            IERC20(token1Address).safeIncreaseAllowance(
-                uniRouterAddress,
-                token1Amt
-            );
-            IPancakeRouter02(uniRouterAddress).addLiquidity(
-                token0Address,
-                token1Address,
-                token0Amt,
-                token1Amt,
-                0,
-                0,
-                address(this),
-                now + 60
-            );
+        if (usdtAmt > 0) {
+            uint i;
+            for (i = 0; i < stakers.length; i ++) {
+                if (shares[stakers[i]] > 0) {
+                    rewards[stakers[i]] = rewards[stakers[i]].add(usdtAmt.mul(shares[stakers[i]]).div(sharesTotal));
+                }
+            }
         }
 
         lastEarnBlock = block.number;
@@ -1967,14 +1986,21 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
         _farm();
     }
 
-    function buyBack(uint256 _earnedAmt) internal returns (uint256) {
+    // Claim the USDT rewars
+    function claimUsdtReward() external returns (uint256) {
+        require(rewards[msg.sender] > 0, "no usdt rewards");
+        IERC20(usdtAddress).safeTransfer(msg.sender, rewards[msg.sender]);
+        rewards[msg.sender] = 0;
+    }
+
+    function buyBack(uint256 _usdtAmt) internal returns (uint256) {
         if (buyBackRate <= 0) {
-            return _earnedAmt;
+            return _usdtAmt;
         }
 
-        uint256 buyBackAmt = _earnedAmt.mul(buyBackRate).div(buyBackRateMax);
+        uint256 buyBackAmt = _usdtAmt.mul(buyBackRate).div(buyBackRateMax);
 
-        IERC20(earnedAddress).safeIncreaseAllowance(
+        IERC20(usdtAddress).safeIncreaseAllowance(
             uniRouterAddress,
             buyBackAmt
         );
@@ -1983,26 +2009,26 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
             .swapExactTokensForTokensSupportingFeeOnTransferTokens(
             buyBackAmt,
             0,
-            earnedToAUTOPath,
+            usdtToAUTOPath,
             buyBackAddress,
             now + 60
         );
 
-        return _earnedAmt.sub(buyBackAmt);
+        return _usdtAmt.sub(buyBackAmt);
     }
 
-    function distributeFees(uint256 _earnedAmt) internal returns (uint256) {
-        if (_earnedAmt > 0) {
+    function distributeFees(uint256 _usdtAmt) internal returns (uint256) {
+        if (_usdtAmt > 0) {
             // Performance fee
             if (controllerFee > 0) {
                 uint256 fee =
-                    _earnedAmt.mul(controllerFee).div(controllerFeeMax);
-                IERC20(earnedAddress).safeTransfer(govAddress, fee);
-                _earnedAmt = _earnedAmt.sub(fee);
+                    _usdtAmt.mul(controllerFee).div(controllerFeeMax);
+                IERC20(usdtAddress).safeTransfer(govAddress, fee);
+                _usdtAmt = _usdtAmt.sub(fee);
             }
         }
 
-        return _earnedAmt;
+        return _usdtAmt;
     }
 
     function convertDustToEarned() public whenNotPaused {
