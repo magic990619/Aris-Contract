@@ -1,9 +1,4 @@
-/**
- *Submitted for verification at BscScan.com on 2021-01-21
-*/
-
-// SPDX-License-Identifier: MIT
-
+//"SPDX-License-Identifier: MIT"
 pragma solidity 0.6.12;
 
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
@@ -741,8 +736,9 @@ library Address {
         require(isContract(target), "Address: call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) =
-            target.call{value: value}(data);
+        (bool success, bytes memory returndata) = target.call{value: value}(
+            data
+        );
         return _verifyCallResult(success, returndata, errorMessage);
     }
 
@@ -901,16 +897,17 @@ library SafeERC20 {
         address spender,
         uint256 value
     ) internal {
-        uint256 newAllowance =
-            token.allowance(address(this), spender).add(value);
-        _callOptionalReturn(
-            token,
-            abi.encodeWithSelector(
-                token.approve.selector,
-                spender,
-                newAllowance
-            )
-        );
+	        uint256 newAllowance = token.allowance(address(this), spender).add(
+	            value
+	        );
+	        _callOptionalReturn(
+	            token,
+	            abi.encodeWithSelector(
+	                token.approve.selector,
+	                spender,
+	                newAllowance
+	            )
+	        );
     }
 
     function safeDecreaseAllowance(
@@ -918,11 +915,10 @@ library SafeERC20 {
         address spender,
         uint256 value
     ) internal {
-        uint256 newAllowance =
-            token.allowance(address(this), spender).sub(
-                value,
-                "SafeERC20: decreased allowance below zero"
-            );
+        uint256 newAllowance = token.allowance(address(this), spender).sub(
+            value,
+            "SafeERC20: decreased allowance below zero"
+        );
         _callOptionalReturn(
             token,
             abi.encodeWithSelector(
@@ -944,11 +940,10 @@ library SafeERC20 {
         // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
         // the target address contains contract code and also asserts for success in the low-level call.
 
-        bytes memory returndata =
-            address(token).functionCall(
-                data,
-                "SafeERC20: low-level call failed"
-            );
+        bytes memory returndata = address(token).functionCall(
+            data,
+            "SafeERC20: low-level call failed"
+        );
         if (returndata.length > 0) {
             // Return data is optional
             // solhint-disable-next-line max-line-length
@@ -1699,100 +1694,563 @@ contract Pausable is Context {
     }
 }
 
-contract StratX is Ownable, ReentrancyGuard, Pausable {
-    // Maximises yields in pancakeswap
+interface IWBNB is IERC20 {
+    function deposit() external payable;
 
+    function withdraw(uint256 wad) external;
+}
+
+interface IBiswapfarm {
+    function deposit(uint256 _pid, uint256 _wantAmt) external;
+
+    function withdraw(uint256 _pid, uint256 _wantAmt) external;
+}
+
+interface IBiswapFactory {
+    function getPair(address tokenA, address tokenB)
+        external
+        view
+        returns (address pair);
+
+    function createPair(address tokenA, address tokenB)
+        external
+        returns (address pair);
+}
+
+library TransferHelper {
+    function safeApprove(
+        address token,
+        address to,
+        uint256 value
+    ) internal {
+        // bytes4(keccak256(bytes('approve(address,uint256)')));
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(0x095ea7b3, to, value)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "TransferHelper::safeApprove: approve failed"
+        );
+    }
+
+    function safeTransfer(
+        address token,
+        address to,
+        uint256 value
+    ) internal {
+        // bytes4(keccak256(bytes('transfer(address,uint256)')));
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(0xa9059cbb, to, value)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "TransferHelper::safeTransfer: transfer failed"
+        );
+    }
+
+    function safeTransferFrom(
+        address token,
+        address from,
+        address to,
+        uint256 value
+    ) internal {
+        // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(0x23b872dd, from, to, value)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "TransferHelper::transferFrom: transferFrom failed"
+        );
+    }
+
+    function safeTransferETH(address to, uint256 value) internal {
+        (bool success, ) = to.call{value: value}(new bytes(0));
+        require(
+            success,
+            "TransferHelper::safeTransferETH: ETH transfer failed"
+        );
+    }
+}
+
+interface IBiswapRouter02 {
+    function factory() external pure returns (address);
+
+    function WETH() external pure returns (address);
+
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        returns (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        );
+
+    function addLiquidityETH(
+        address token,
+        uint256 amountTokenDesired,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        payable
+        returns (
+            uint256 amountToken,
+            uint256 amountETH,
+            uint256 liquidity
+        );
+
+    function removeLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 liquidity,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountA, uint256 amountB);
+
+    function removeLiquidityETH(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountToken, uint256 amountETH);
+
+    function removeLiquidityWithPermit(
+        address tokenA,
+        address tokenB,
+        uint256 liquidity,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountA, uint256 amountB);
+
+    function removeLiquidityETHWithPermit(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountToken, uint256 amountETH);
+
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapTokensForExactTokens(
+        uint256 amountOut,
+        uint256 amountInMax,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapExactETHForTokens(
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable returns (uint256[] memory amounts);
+
+    function swapTokensForExactETH(
+        uint256 amountOut,
+        uint256 amountInMax,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapExactTokensForETH(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapETHForExactTokens(
+        uint256 amountOut,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable returns (uint256[] memory amounts);
+
+    function quote(
+        uint256 amountA,
+        uint256 reserveA,
+        uint256 reserveB
+    ) external pure returns (uint256 amountB);
+
+    function getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) external pure returns (uint256 amountOut);
+
+    function getAmountIn(
+        uint256 amountOut,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) external pure returns (uint256 amountIn);
+
+    function getAmountsOut(uint256 amountIn, address[] calldata path)
+        external
+        view
+        returns (uint256[] memory amounts);
+
+    function getAmountsIn(uint256 amountOut, address[] calldata path)
+        external
+        view
+        returns (uint256[] memory amounts);
+
+    function removeLiquidityETHSupportingFeeOnTransferTokens(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountETH);
+
+    function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountETH);
+
+    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external;
+
+    function swapExactETHForTokensSupportingFeeOnTransferTokens(
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable;
+
+    function swapExactTokensForETHSupportingFeeOnTransferTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external;
+}
+
+interface IBiswapPair {
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    function name() external pure returns (string memory);
+
+    function symbol() external pure returns (string memory);
+
+    function decimals() external pure returns (uint8);
+
+    function totalSupply() external view returns (uint256);
+
+    function balanceOf(address owner) external view returns (uint256);
+
+    function allowance(address owner, address spender)
+        external
+        view
+        returns (uint256);
+
+    function approve(address spender, uint256 value) external returns (bool);
+
+    function transfer(address to, uint256 value) external returns (bool);
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) external returns (bool);
+
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
+
+    function PERMIT_TYPEHASH() external pure returns (bytes32);
+
+    function nonces(address owner) external view returns (uint256);
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+    event Burn(
+        address indexed sender,
+        uint256 amount0,
+        uint256 amount1,
+        address indexed to
+    );
+    event Swap(
+        address indexed sender,
+        uint256 amount0In,
+        uint256 amount1In,
+        uint256 amount0Out,
+        uint256 amount1Out,
+        address indexed to
+    );
+    event Sync(uint112 reserve0, uint112 reserve1);
+
+    function MINIMUM_LIQUIDITY() external pure returns (uint256);
+
+    function factory() external view returns (address);
+
+    function token0() external view returns (address);
+
+    function token1() external view returns (address);
+
+    function getReserves()
+        external
+        view
+        returns (
+            uint112 reserve0,
+            uint112 reserve1,
+            uint32 blockTimestampLast
+        );
+
+    function price0CumulativeLast() external view returns (uint256);
+
+    function price1CumulativeLast() external view returns (uint256);
+
+    function kLast() external view returns (uint256);
+
+    function mint(address to) external returns (uint256 liquidity);
+
+    function burn(address to)
+        external
+        returns (uint256 amount0, uint256 amount1);
+
+    function swap(
+        uint256 amount0Out,
+        uint256 amount1Out,
+        address to,
+        bytes calldata data
+    ) external;
+
+    function skim(address to) external;
+
+    function sync() external;
+
+    function initialize(address, address) external;
+}
+
+contract StratX_pancakeLP is Ownable, ReentrancyGuard, Pausable {
+    // Maximises yields in pancakeswap
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    bool public isCAKEStaking; // only for staking CAKE using pancakeswap's native CAKE staking contract.
-    bool public isAutoComp; // this vault is purely for staking. eg. WBNB-AUTO staking vault.
-
-    address public farmContractAddress; // address of farm, eg, PCS, Thugs etc.
-    uint256 public pid; // pid of pool in farmContractAddress
+    //------------==
+    bool public isCAKEStaking = false;
+    bool public isAfiComp = true;
+    uint256 public pid;
     address public wantAddress;
     address public token0Address;
     address public token1Address;
-    address public earnedAddress;
-    address public uniRouterAddress; // uniswap, pancakeswap etc
 
-    address public constant wbnbAddress =
-        0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd; // 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c: mainnet
-    address public autoFarmAddress;
-    address public AUTOAddress;
-    address public govAddress; // timelock contract
+    address public farmContractAddress =
+        0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652;
+    address public constant earnedAddress =
+        0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82; //cake
+
+    //------------==
+    address public constant wbnb =
+        address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
+
+    address public constant busd =
+        address(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
+    address public constant aqua =
+        address(0x72B7D61E8fC8cF971960DD9cfA59B8C829D91991);
+    address public constant usdt =
+        address(0x55d398326f99059fF775485246999027B3197955);
+    address public constant usdc =
+        address(0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d);
+    address public constant unirouterbiswap =
+        address(0x10ED43C718714eb63d5aA57B78B54704E256024E); //biSWAP
+    address public constant masterchef =
+        address(0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652);
+
+    uint256 public WITHDRAWAL_FEE = 10;
+    uint256 public constant WITHDRAWAL_MAX = 10000;
+
+    uint256 public PLANET_WITHDRAW_FEE = 0;
+    uint256 public PLANET_DEPOSIT_FEE = 0;
+    uint256 public constant PLANET_MAX = 10000;
+
+    // ---------------==
+    address public constant uniRouterAddress =
+        0x10ED43C718714eb63d5aA57B78B54704E256024E; //pancakeswap
+    //address public constant wbnbAddress = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+
+    address public constant afiFarmAddress =
+        0x657D0420F696aAedC48B40545Ba5e85b10e4C746;
+    //address public constant AFIAddress = 0xcf496c03F630C343333a28749a7FC4d589b1137A;//AFIX
+    address public constant AFIAddress =
+        0xC6bfcf0469a74b36c070b807162fFcbF7B0a1103; //AFIB
+
+    address public govAddress = 0x6f0026469e743C75c984b0579F854F1709206114;
+
+    address public constant receiveFee =
+        address(0x69F3BA775f9B99a0Ff6f74D9BC8080E96b3a681d); //
+
+    address public  fundManager = address(0x8b4Db882711768Dd29B93B7c3F657591F25Cf498);
+    address public  fundManager2 = address(0xB278744677c69AdEa58248Dd8a49D92B9A57d6f0); 
+    address public  fundManager3 = address(0x2D267Ee1262bCdB29a4866527ff15eb845715503);
+
     bool public onlyGov = true;
 
     uint256 public lastEarnBlock = 0;
     uint256 public wantLockedTotal = 0;
     uint256 public sharesTotal = 0;
 
-    uint256 public controllerFee = 20;
+    uint256 public controllerFee = 2800;
     uint256 public constant controllerFeeMax = 10000; // 100 = 1%
-    uint256 public constant controllerFeeUL = 300;
+    uint256 public constant controllerFeeUL = 6000;
 
-    uint256 public buyBackRate = 150;
+    uint256 public buyBackRate = 4200;
     uint256 public constant buyBackRateMax = 10000; // 100 = 1%
-    uint256 public constant buyBackRateUL = 800;
+    uint256 public constant buyBackRateUL = 6000;
     address public constant buyBackAddress =
         0x000000000000000000000000000000000000dEaD;
 
-    uint256 public entranceFeeFactor = 9990; // < 0.1% entrance fee - goes to pool + prevents front-running
+    uint256 public constant entranceFeeFactor = 10000; // < 0.1% entrance fee - goes to pool + prevents front-running
     uint256 public constant entranceFeeFactorMax = 10000;
     uint256 public constant entranceFeeFactorLL = 9950; // 0.5% is the max entrance fee settable. LL = lowerlimit
 
-    address[] public earnedToAUTOPath;
+    address[] public earnedToAFIPath = [earnedAddress, wbnb, AFIAddress];
     address[] public earnedToToken0Path;
     address[] public earnedToToken1Path;
     address[] public token0ToEarnedPath;
     address[] public token1ToEarnedPath;
+    address[] public earnedToWbnbPath = [earnedAddress, wbnb];
+    address[] public wbnbToAFIPath = [wbnb, AFIAddress];
+    address[] public wbnbToToken0Path = [wbnb, token0Address];
+    address[] public wbnbToToken1Path = [wbnb, token1Address];
 
-    constructor(
-        address _autoFarmAddress,
-        // address _AUTOAddress,
-        // bool _isCAKEStaking,
-        bool _isAutoComp,
-        // address _farmContractAddress,
-        // uint256 _pid,
-        address _wantAddress
-        // address _token0Address,
-        // address _token1Address,
-        // address _earnedAddress,
-        // address _uniRouterAddress,
-        // address[] memory _earnedToAUTOPath,
-        // address[] memory _earnedToToken0Path,
-        // address[] memory _earnedToToken1Path,
-        // address[] memory _token0ToEarnedPath,
-        // address[] memory _token1ToEarnedPath
-    ) public {
-        // govAddress = msg.sender;
-        autoFarmAddress = _autoFarmAddress;
-        // AUTOAddress = _AUTOAddress;
+    //address public buybackstrat;
+    bool public enableAddLiquidity = true;
 
-        // isCAKEStaking = _isCAKEStaking;
-        isAutoComp = _isAutoComp;
-        wantAddress = _wantAddress;
+    uint256 public slippageFactor = 950; // 5% default slippage tolerance
+    uint256 public constant slippageFactorUL = 995;
 
-        // if (isAutoComp) {
-        //     if (!isCAKEStaking) {
-        //         token0Address = _token0Address;
-        //         token1Address = _token1Address;
-        //     }
+    mapping(address => uint256) public shares;  // Info of each user deposited LP tokens
+    mapping(address => uint256) public rewards;  // Info of each user's USDT rewards
+    address[] public stakers;
+    address[] public earnedToUsdtPath = [earnedAddress, wbnb, usdt];
+    address[] public usdtToAFIPath = [usdt, wbnb, AFIAddress];
 
-        //     farmContractAddress = _farmContractAddress;
-        //     pid = _pid;
-        //     earnedAddress = _earnedAddress;
+    constructor() public {
+        wantAddress = 0xA39Af17CE4a8eb807E076805Da1e2B8EA7D0755b;
+        pid = 47;
+        token0Address = IBiswapPair(wantAddress).token0();
+        token1Address = IBiswapPair(wantAddress).token1();
+        wbnbToToken0Path = [wbnb, token0Address];
+        wbnbToToken1Path = [wbnb, token1Address];
 
-        //     uniRouterAddress = _uniRouterAddress;
+        if (token0Address == busd) {
+            earnedToToken0Path = [earnedAddress, wbnb, busd];
+        } else if (token0Address != earnedAddress) {
+            earnedToToken0Path = [earnedAddress, wbnb, busd, token0Address];
+        }
 
-        //     earnedToAUTOPath = _earnedToAUTOPath;
-        //     earnedToToken0Path = _earnedToToken0Path;
-        //     earnedToToken1Path = _earnedToToken1Path;
-        //     token0ToEarnedPath = _token0ToEarnedPath;
-        //     token1ToEarnedPath = _token1ToEarnedPath;
-        // }
+        if (token1Address == busd) {
+            earnedToToken1Path = [earnedAddress, wbnb, busd];
+        } else if (token1Address != earnedAddress) {
+            earnedToToken1Path = [earnedAddress, wbnb, busd, token1Address];
+        }
 
-        transferOwnership(autoFarmAddress);
+        IERC20(wantAddress).safeApprove(masterchef, uint256(-1));
+        IERC20(earnedAddress).safeApprove(unirouterbiswap, uint256(-1));
+        IERC20(wbnb).safeApprove(unirouterbiswap, uint256(-1));
+
+        IERC20(token0Address).safeApprove(unirouterbiswap, 0);
+        IERC20(token0Address).safeApprove(unirouterbiswap, uint256(-1));
+
+        IERC20(token1Address).safeApprove(unirouterbiswap, 0);
+        IERC20(token1Address).safeApprove(unirouterbiswap, uint256(-1));
+
+        transferOwnership(afiFarmAddress);
+    }
+
+    // add staker to holders lists
+    function _addStaker(address _userAddress) internal {
+        uint i;
+        for (i = 0; i < stakers.length; i ++) {
+            if (stakers[i] == _userAddress) {
+                break;
+            }
+        }
+        if (i == stakers.length) {
+            stakers.push(_userAddress);
+        }
+    }
+
+    // remove staker from holders lists
+    function _removeStaker(address _userAddress) internal {
+        uint i;
+        for (i = 0; i < stakers.length; i ++) {
+            if (stakers[i] == _userAddress) {
+                break;
+            }
+        }
+        if (i < stakers.length) {
+            uint256 j;
+            for (j = i; j < stakers.length; j ++) {
+                stakers[j] = stakers[j + 1];
+            }
+            stakers.pop();
+        }
     }
 
     // Receives new deposits from user
@@ -1807,22 +2265,39 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
             address(this),
             _wantAmt
         );
+        if (PLANET_DEPOSIT_FEE > 0) {
+            _wantAmt = _wantAmt.mul(PLANET_MAX.sub(PLANET_DEPOSIT_FEE)).div(
+                PLANET_MAX
+            );
+        } else {
+            _wantAmt = _wantAmt.sub(1);
+        }
 
         uint256 sharesAdded = _wantAmt;
-        if (wantLockedTotal > 0) {
+        if (wantLockedTotal > 0 && sharesTotal > 0) {
             sharesAdded = _wantAmt
                 .mul(sharesTotal)
                 .mul(entranceFeeFactor)
                 .div(wantLockedTotal)
                 .div(entranceFeeFactorMax);
+            sharesTotal = sharesTotal.add(sharesAdded);
+        } else {
+            sharesTotal = sharesTotal
+                .add(sharesAdded)
+                .mul(entranceFeeFactor)
+                .div(entranceFeeFactorMax);
         }
-        sharesTotal = sharesTotal.add(sharesAdded);
 
-        if (isAutoComp) {
+        if (isAfiComp) {
             _farm();
         } else {
             wantLockedTotal = wantLockedTotal.add(_wantAmt);
         }
+
+        if (sharesAdded > 0 && shares[_userAddress] == 0) {
+            _addStaker(_userAddress);
+        }
+        shares[_userAddress] = shares[_userAddress].add(sharesAdded);
 
         return sharesAdded;
     }
@@ -1832,14 +2307,20 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
     }
 
     function _farm() internal {
-        uint256 wantAmt = IERC20(wantAddress).balanceOf(address(this));
-        wantLockedTotal = wantLockedTotal.add(wantAmt);
-        IERC20(wantAddress).safeIncreaseAllowance(farmContractAddress, wantAmt);
-
-        if (isCAKEStaking) {
-            IPancakeswapFarm(farmContractAddress).enterStaking(wantAmt); // Just for CAKE staking, we dont use deposit()
+        uint256 pairBal = IERC20(wantAddress).balanceOf(address(this));
+        if (PLANET_DEPOSIT_FEE > 0) {
+            wantLockedTotal = wantLockedTotal.add(
+                pairBal.mul(PLANET_MAX.sub(PLANET_DEPOSIT_FEE)).div(PLANET_MAX)
+            );
         } else {
-            IPancakeswapFarm(farmContractAddress).deposit(pid, wantAmt);
+//            wantLockedTotal = wantLockedTotal.add(pairBal.sub(1));
+	      wantLockedTotal = wantLockedTotal.add(pairBal).sub(1);
+
+        }
+        if (pairBal > 0) {
+            IBiswapfarm(masterchef).deposit(pid, pairBal);
+        } else {
+            IBiswapfarm(masterchef).deposit(pid, 0);
         }
     }
 
@@ -1851,31 +2332,40 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
     {
         require(_wantAmt > 0, "_wantAmt <= 0");
 
-        if (isAutoComp) {
-            if (isCAKEStaking) {
-                IPancakeswapFarm(farmContractAddress).leaveStaking(_wantAmt); // Just for CAKE staking, we dont use withdraw()
+        uint256 wantAmt = IERC20(wantAddress).balanceOf(address(this));
+        uint256 loss = _wantAmt.mul(PLANET_WITHDRAW_FEE).div(PLANET_MAX);
+
+        if (isAfiComp) {
+            if (wantAmt < _wantAmt) {
+                IBiswapfarm(masterchef).withdraw(pid, _wantAmt.sub(wantAmt));
             } else {
-                IPancakeswapFarm(farmContractAddress).withdraw(pid, _wantAmt);
+                wantAmt = _wantAmt;
             }
         }
-
-        uint256 wantAmt = IERC20(wantAddress).balanceOf(address(this));
-        if (_wantAmt > wantAmt) {
-            _wantAmt = wantAmt;
-        }
-
         if (wantLockedTotal < _wantAmt) {
             _wantAmt = wantLockedTotal;
         }
+
+        uint256 withdrawalFee = _wantAmt.sub(loss).mul(WITHDRAWAL_FEE).div(
+            WITHDRAWAL_MAX
+        );
+        IERC20(wantAddress).safeTransfer(receiveFee, withdrawalFee);
 
         uint256 sharesRemoved = _wantAmt.mul(sharesTotal).div(wantLockedTotal);
         if (sharesRemoved > sharesTotal) {
             sharesRemoved = sharesTotal;
         }
+
         sharesTotal = sharesTotal.sub(sharesRemoved);
         wantLockedTotal = wantLockedTotal.sub(_wantAmt);
-
-        IERC20(wantAddress).safeTransfer(autoFarmAddress, _wantAmt);
+        shares[_userAddress] = shares[_userAddress].sub(sharesRemoved);
+        if (shares[_userAddress] <= 0) {
+            _removeStaker(_userAddress);
+        }
+        IERC20(wantAddress).safeTransfer(
+            afiFarmAddress,
+            _wantAmt.sub(loss).sub(withdrawalFee)
+        );
 
         return sharesRemoved;
     }
@@ -1885,81 +2375,36 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
     // 3. Deposits want tokens
 
     function earn() public whenNotPaused {
-        require(isAutoComp, "!isAutoComp");
+        require(isAfiComp, "!isAfiComp");
         if (onlyGov) {
             require(msg.sender == govAddress, "Not authorised");
         }
 
-        // Harvest farm tokens
-        if (isCAKEStaking) {
-            IPancakeswapFarm(farmContractAddress).leaveStaking(0); // Just for CAKE staking, we dont use withdraw()
-        } else {
-            IPancakeswapFarm(farmContractAddress).withdraw(pid, 0);
-        }
+        IBiswapfarm(masterchef).deposit(pid, 0);
 
-        // Converts farm tokens into want tokens
+        // Converts earn tokens into usdt tokens
         uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
-
-        earnedAmt = distributeFees(earnedAmt);
-        earnedAmt = buyBack(earnedAmt);
-
-        if (isCAKEStaking) {
-            lastEarnBlock = block.number;
-            _farm();
-            return;
-        }
-
-        IERC20(earnedAddress).safeIncreaseAllowance(
-            uniRouterAddress,
-            earnedAmt
-        );
-
-        if (earnedAddress != token0Address) {
-            // Swap half earned to token0
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                earnedAmt.div(2),
+        IBiswapRouter02(unirouterbiswap)
+            .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                earnedAmt,
                 0,
-                earnedToToken0Path,
+                earnedToUsdtPath,
                 address(this),
-                now + 60
+                block.timestamp.add(600)
             );
-        }
 
-        if (earnedAddress != token1Address) {
-            // Swap half earned to token1
-            IPancakeRouter02(uniRouterAddress)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                earnedAmt.div(2),
-                0,
-                earnedToToken1Path,
-                address(this),
-                now + 60
-            );
-        }
+        uint256 usdtAmt = IERC20(usdt).balanceOf(address(this));
 
-        // Get want tokens, ie. add liquidity
-        uint256 token0Amt = IERC20(token0Address).balanceOf(address(this));
-        uint256 token1Amt = IERC20(token1Address).balanceOf(address(this));
-        if (token0Amt > 0 && token1Amt > 0) {
-            IERC20(token0Address).safeIncreaseAllowance(
-                uniRouterAddress,
-                token0Amt
-            );
-            IERC20(token1Address).safeIncreaseAllowance(
-                uniRouterAddress,
-                token1Amt
-            );
-            IPancakeRouter02(uniRouterAddress).addLiquidity(
-                token0Address,
-                token1Address,
-                token0Amt,
-                token1Amt,
-                0,
-                0,
-                address(this),
-                now + 60
-            );
+        usdtAmt = buyBack(usdtAmt);
+        usdtAmt = distributeFees(usdtAmt);
+
+        if (usdtAmt > 0) {
+            uint i;
+            for (i = 0; i < stakers.length; i ++) {
+                if (shares[stakers[i]] > 0) {
+                    rewards[stakers[i]] = rewards[stakers[i]].add(usdtAmt.mul(shares[stakers[i]]).div(sharesTotal));
+                }
+            }
         }
 
         lastEarnBlock = block.number;
@@ -1967,46 +2412,127 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
         _farm();
     }
 
-    function buyBack(uint256 _earnedAmt) internal returns (uint256) {
-        if (buyBackRate <= 0) {
-            return _earnedAmt;
+    // Claim the USDT rewars
+    function claimUsdtRewards() external {
+        require(rewards[msg.sender] > 0, "no usdt rewards");
+        IERC20(usdt).safeTransfer(msg.sender, rewards[msg.sender]);
+        rewards[msg.sender] = 0;
+    }
+
+    //Pancakeswap
+    function _safeSwap(
+        address _uniRouterAddress,
+        uint256 _amountIn,
+        uint256 _slippageFactor,
+        address[] memory _path,
+        address _to,
+        uint256 _deadline
+    ) internal virtual {
+        uint256[] memory amounts = IPancakeRouter02(_uniRouterAddress)
+            .getAmountsOut(_amountIn, _path);
+        uint256 amountOut = amounts[amounts.length.sub(1)];
+
+        IPancakeRouter02(_uniRouterAddress)
+            .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                _amountIn,
+                amountOut.mul(_slippageFactor).div(1000),
+                _path,
+                _to,
+                _deadline
+            );
+    }
+
+    /**
+     * @dev Swaps {earnedAddress} for {lpToken0}, {lpToken1} & {wbnb} using PanearnedAddressSwap.
+     */
+    function addLiquidity() internal {
+        uint256 earnedAddressHalf = IERC20(wbnb).balanceOf(address(this)).div(
+            2
+        );
+        //uint256 earnedAddressHalf = _earnedAmt.div(2);
+
+        if (token0Address != wbnb) {
+            IBiswapRouter02(unirouterbiswap)
+                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                    earnedAddressHalf,
+                    0,
+                    wbnbToToken0Path,
+                    address(this),
+                    now.add(600)
+                );
         }
 
-        uint256 buyBackAmt = _earnedAmt.mul(buyBackRate).div(buyBackRateMax);
+        if (token1Address != wbnb) {
+            IBiswapRouter02(unirouterbiswap)
+                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                    earnedAddressHalf,
+                    0,
+                    wbnbToToken1Path,
+                    address(this),
+                    now.add(600)
+                );
+        }
 
-        IERC20(earnedAddress).safeIncreaseAllowance(
-            uniRouterAddress,
+        uint256 lp0Bal = IERC20(token0Address).balanceOf(address(this));
+        uint256 lp1Bal = IERC20(token1Address).balanceOf(address(this));
+        IBiswapRouter02(unirouterbiswap).addLiquidity(
+            token0Address,
+            token1Address,
+            lp0Bal,
+            lp1Bal,
+            0,
+            0,
+            address(this),
+            now
+        );
+
+        //return IERC20(wantAddress).balanceOf(address(this));
+    }
+
+    function buyBack(uint256 _usdtAmt) internal returns (uint256) {
+        if (buyBackRate <= 0) {
+            return _usdtAmt;
+        }
+
+        uint256 buyBackAmt = _usdtAmt.mul(buyBackRate).div(buyBackRateMax);
+
+        IERC20(usdt).safeIncreaseAllowance(
+            unirouterbiswap,
             buyBackAmt
         );
 
-        IPancakeRouter02(uniRouterAddress)
+        IBiswapRouter02(unirouterbiswap)
             .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            buyBackAmt,
-            0,
-            earnedToAUTOPath,
-            buyBackAddress,
-            now + 60
-        );
+                buyBackAmt,
+                0,
+                usdtToAFIPath,
+                buyBackAddress,
+                now + 60
+            );
 
-        return _earnedAmt.sub(buyBackAmt);
+        return _usdtAmt.sub(buyBackAmt);
     }
 
-    function distributeFees(uint256 _earnedAmt) internal returns (uint256) {
-        if (_earnedAmt > 0) {
+    function distributeFees(uint256 _usdtAmt) internal returns (uint256) {
+        if (_usdtAmt > 0) {
             // Performance fee
             if (controllerFee > 0) {
-                uint256 fee =
-                    _earnedAmt.mul(controllerFee).div(controllerFeeMax);
-                IERC20(earnedAddress).safeTransfer(govAddress, fee);
-                _earnedAmt = _earnedAmt.sub(fee);
+                uint256 fee = _usdtAmt.mul(controllerFee).div(
+                    controllerFeeMax
+                );
+                IERC20(usdt).safeTransfer(fundManager, fee.mul(36).div(100));
+                IERC20(usdt).safeTransfer(fundManager2, fee.mul(7).div(100));
+                IERC20(usdt).safeTransfer(fundManager3, fee.mul(3).div(100));
+                IERC20(usdt).safeTransfer(receiveFee, fee.mul(54).div(100));
+                _usdtAmt = _usdtAmt.sub(fee);
             }
         }
 
-        return _earnedAmt;
+        return _usdtAmt;
     }
 
     function convertDustToEarned() public whenNotPaused {
-        require(isAutoComp, "!isAutoComp");
+        require(isAfiComp, "!isAfiComp");
         require(!isCAKEStaking, "isCAKEStaking");
 
         // Converts dust tokens into earned tokens, which will be reinvested on the next earn().
@@ -2015,66 +2541,83 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
         uint256 token0Amt = IERC20(token0Address).balanceOf(address(this));
         if (token0Address != earnedAddress && token0Amt > 0) {
             IERC20(token0Address).safeIncreaseAllowance(
-                uniRouterAddress,
+                unirouterbiswap,
                 token0Amt
             );
 
             // Swap all dust tokens to earned tokens
-            IPancakeRouter02(uniRouterAddress)
+            IBiswapRouter02(unirouterbiswap)
                 .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                token0Amt,
-                0,
-                token0ToEarnedPath,
-                address(this),
-                now + 60
-            );
+                    token0Amt,
+                    0,
+                    token0ToEarnedPath,
+                    address(this),
+                    now + 60
+                );
         }
 
         // Converts token1 dust (if any) to earned tokens
         uint256 token1Amt = IERC20(token1Address).balanceOf(address(this));
         if (token1Address != earnedAddress && token1Amt > 0) {
             IERC20(token1Address).safeIncreaseAllowance(
-                uniRouterAddress,
+                unirouterbiswap,
                 token1Amt
             );
 
             // Swap all dust tokens to earned tokens
-            IPancakeRouter02(uniRouterAddress)
+            IBiswapRouter02(unirouterbiswap)
                 .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                token1Amt,
-                0,
-                token1ToEarnedPath,
-                address(this),
-                now + 60
-            );
+                    token1Amt,
+                    0,
+                    token1ToEarnedPath,
+                    address(this),
+                    now + 60
+                );
         }
     }
 
     function pause() public {
         require(msg.sender == govAddress, "Not authorised");
         _pause();
+        IERC20(wantAddress).safeApprove(masterchef, 0);
+        IERC20(earnedAddress).safeApprove(unirouterbiswap, 0);
+        IERC20(wbnb).safeApprove(unirouterbiswap, 0);
+        IERC20(token0Address).safeApprove(unirouterbiswap, 0);
+        IERC20(token1Address).safeApprove(unirouterbiswap, 0);
     }
 
     function unpause() external {
         require(msg.sender == govAddress, "Not authorised");
         _unpause();
+        IERC20(wantAddress).safeApprove(masterchef, uint256(-1));
+        IERC20(earnedAddress).safeApprove(unirouterbiswap, uint256(-1));
+        IERC20(wbnb).safeApprove(unirouterbiswap, uint256(-1));
+
+        IERC20(token0Address).safeApprove(unirouterbiswap, 0);
+        IERC20(token0Address).safeApprove(unirouterbiswap, uint256(-1));
+
+        IERC20(token1Address).safeApprove(unirouterbiswap, 0);
+        IERC20(token1Address).safeApprove(unirouterbiswap, uint256(-1));
     }
 
-    function setEntranceFeeFactor(uint256 _entranceFeeFactor) public {
-        require(msg.sender == govAddress, "Not authorised");
-        require(_entranceFeeFactor > entranceFeeFactorLL, "!safe - too low");
-        require(_entranceFeeFactor <= entranceFeeFactorMax, "!safe - too high");
-        entranceFeeFactor = _entranceFeeFactor;
+    function setEnableAddLiquidity(bool _status) public {
+        require(msg.sender == govAddress, "!gov");
+        enableAddLiquidity = _status;
+    }
+
+    function setWITHDRAWALFee(uint256 _WITHDRAWAL_FEE) public {
+        require(msg.sender == govAddress, "!gov");
+        WITHDRAWAL_FEE = _WITHDRAWAL_FEE;
     }
 
     function setControllerFee(uint256 _controllerFee) public {
-        require(msg.sender == govAddress, "Not authorised");
+        require(msg.sender == govAddress, "!gov");
         require(_controllerFee <= controllerFeeUL, "too high");
         controllerFee = _controllerFee;
     }
 
     function setbuyBackRate(uint256 _buyBackRate) public {
-        require(msg.sender == govAddress, "Not authorised");
+        require(msg.sender == govAddress, "!gov");
         require(buyBackRate <= buyBackRateUL, "too high");
         buyBackRate = _buyBackRate;
     }
@@ -2087,6 +2630,21 @@ contract StratX is Ownable, ReentrancyGuard, Pausable {
     function setOnlyGov(bool _onlyGov) public {
         require(msg.sender == govAddress, "!gov");
         onlyGov = _onlyGov;
+    }
+
+    function setfundManager(address _fundManager) public {
+        require(msg.sender == govAddress, "!gov");
+        fundManager = _fundManager;
+    }
+
+    function setfundManager2(address _fundManager2) public {
+        require(msg.sender == govAddress, "!gov");
+        fundManager2 = _fundManager2;
+    }
+
+    function setfundManager3(address _fundManager3) public {
+        require(msg.sender == govAddress, "!gov");
+        fundManager3 = _fundManager3;
     }
 
     function inCaseTokensGetStuck(
